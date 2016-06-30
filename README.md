@@ -2,7 +2,7 @@
 
 Processwire Module to render a nested tree starting from a single root or an array of pages.
 
-Aligator is similar to MarkupSimpleNavigation but has a different approach of how to define the markup for your menu. It doesn't assume any markup or classes. It's up to you to define them where needed. It's less plug and play and requires some more advanced knowlegde of ProcessWire, as some additional setup and coding is needed. But allows for poweful and easier customization without using hooks.
+Aligator is similar to MarkupSimpleNavigation but has a different approach of how to define the markup for your menu. It doesn't assume any markup or classes. It's up to you to define them where needed. It's less plug and play and requires some more advanced knowledge of ProcessWire, as some additional setup and coding is needed. But allows for powerful and easier customization without using hooks.
 
 Aligator uses callback functions to archive this. Additionally a selector can be used to filter the children for your navigation.
 
