@@ -28,10 +28,10 @@ The render method accepts four arguments and returns the markup as a string:
 $markup = $modules->Aligator->render(root, options, maxlevels, collapsed);
 ```
 
-root - A root page or an array of pages (PageArray)
-options - Array of options
-maxlevels - How many levels the module should render
-collapsed - When set to true it will only render the current active root branch
+* `root` - A root page or an array of pages (PageArray)
+* `options` - Array of options
+* `maxlevels` - How many levels the module should render
+* `collapsed` - When set to true it will only render the current active root branch
 
 So most basic call without options could be:
 
