@@ -85,7 +85,7 @@ $nav = $modules->Aligator;
 $nav->setDefaultOptions(array(
         "selector" => "",
         "callback" => function($item, $level){
-        return array(
+            return array(
                 "item" => "<a href='$item->url'>$item->title</a>",
                 "listOpen" => "<li>",
                 "listClose" => "</li>",
