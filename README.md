@@ -59,7 +59,7 @@ So looking at the default options we have this:
 $menuOptions = array(
     array(
         "selector" => "",
-        "callback" => function($item, $level){
+        "callback" => function($item, $level, $wire){
             // any code here to determine the output
             return array(
                 "item" => "<a href='$item->url'>$item->title</a>",
@@ -84,7 +84,7 @@ You can overwrite the default options the module uses by using the setDefaultOpt
 $nav = $modules->Aligator;
 $nav->setDefaultOptions(array(
         "selector" => "",
-        "callback" => function($item, $level){
+        "callback" => function($item, $level, $wire){
             return array(
                 "item" => "<a href='$item->url'>$item->title</a>",
                 "listOpen" => "<li>",
@@ -107,9 +107,10 @@ $nav = $modules->Aligator;
 
 $nav->setDefaultOptions(array(
         "selector" => "template=basic-page",
-        "callback" => function($item, $level){
-            $class = $item === wire("page") ? " current" : "";
-            $class .= wire("page")->parents->has($item) ? " parent" : "";
+        "callback" => function($item, $level, $wire){
+            $page = $wire('page');
+            $class = $item === $page ? " current" : "";
+            $class .= $page->parents->has($item) ? " parent" : "";
             if($level < 3) $class .= $item->numChildren("template=basic-page") ? " has_children" : "";
             return array(
                 "item" => "<a href='$item->url'>$item->title</a>",
@@ -125,7 +126,7 @@ $nav->setDefaultOptions(array(
 $menuOptions = array(
     array( // overwrite for first level
         "selector" => "",
-        "callback" => function($item, $level){
+        "callback" => function($item, $level, $wire){
             return array(
                 "wrapperOpen" => "<ul class='mainnav'>"
             );
@@ -146,9 +147,10 @@ Here we let the default options the module has and specify explicit the options 
 $menuOptions = array(
     array( // level 1
         "selector" => "template=basic-page|domain_root",
-        "callback" => function($item, $level){
-            $class = $item === wire("page") ? " current" : "";
-            $class .= wire("page")->parents->has($item) ? " parent" : "";
+        "callback" => function($item, $level, $wire){
+            $page = $wire('page');
+            $class = $item === $page ? " current" : "";
+            $class .= $page->parents->has($item) ? " parent" : "";
             $class .= $item->numChildren("template=basic-page") ? " has_children" : "";
             return array(
                 "item" => "<a href='$item->url'>$item->title $item->template</a>",
@@ -161,9 +163,10 @@ $menuOptions = array(
     ),
     array( // level 2
         "selector" => "template=basic-page",
-        "callback" => function($item, $level){
-            $class = $item === wire("page") ? " current" : "";
-            $class .= wire("page")->parents->has($item) ? " parent" : "";
+        "callback" => function($item, $level, $wire){
+            $page = $wire('page');
+            $class = $item === $page ? " current" : "";
+            $class .= $page->parents->has($item) ? " parent" : "";
             $class .= $item->numChildren("template=basic-page") ? " has_children" : "";
             return array(
                 "item" => "<a href='$item->url'>$item->title</a>",
@@ -176,9 +179,10 @@ $menuOptions = array(
     ),
     array( // level 3
         "selector" => "template=basic-page|entry",
-        "callback" => function($item, $level){
-            $class = $item === wire("page") ? " current" : "";
-            $class .= wire("page")->parents->has($item) ? " parent" : "";
+        "callback" => function($item, $level, $wire){
+            $page = $wire('page');
+            $class = $item === $page ? " current" : "";
+            $class .= $page->parents->has($item) ? " parent" : "";
             return array(
                 "item" => "<a href='$item->url'>$item->title</a>",
                 "listOpen" => "<li class='level$level$class'>",
