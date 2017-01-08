@@ -17,7 +17,7 @@ class Aligator extends WireData implements Module{
     public static function getModuleInfo() {
         return array(
             'title' => 'Aligator',
-            'version' => 1,
+            'version' => 2,
             'summary' => 'Module to render nested markup from a specific root parent or an PageArray of roots.',
             'href' => 'http://processwire.com',
             'singular' => true,
@@ -31,7 +31,7 @@ class Aligator extends WireData implements Module{
         // set the default options
         $this->defaultOptions = array(
             "selector" => "",
-            "callback" => function($item, $level){
+            "callback" => function($item, $level, $wire){
                 return array(
                     "item" => "<a href='$item->url'>" . $item->title . "</a>",
                     "listOpen" => "<li>",
@@ -59,6 +59,8 @@ class Aligator extends WireData implements Module{
         $out = "";
         if($limit && $level > $limit) return;
 
+        $wire = $this->wire;
+
         $return = array();
         $selector = "";
         $children = null;
@@ -76,8 +78,8 @@ class Aligator extends WireData implements Module{
             if(!count($children)) return;
             $firstChild = $children->first();
             if(!$firstChild->id) return;
-            $return = isset($options[$level-1]['callback']) ? call_user_func_array($options[$level-1]['callback'], array($firstChild, $level)) : array();
-            $returnDefault = call_user_func_array($this->defaultOptions['callback'], array($firstChild, $level));
+            $return = isset($options[$level-1]['callback']) ? call_user_func_array($options[$level-1]['callback'], array($firstChild, $level, $wire)) : array();
+            $returnDefault = call_user_func_array($this->defaultOptions['callback'], array($firstChild, $level, $wire));
             $return = array_merge($returnDefault, $return);
 
         } else {
@@ -91,7 +93,7 @@ class Aligator extends WireData implements Module{
             if(!count($children)) return;
             $firstChild = $children->first();
             if(!$firstChild->id) return;
-            $return = call_user_func_array($this->defaultOptions['callback'], array($firstChild, $level));
+            $return = call_user_func_array($this->defaultOptions['callback'], array($firstChild, $level, $wire));
         }
 
         if($return["wrapperOpen"]) {
@@ -126,11 +128,11 @@ class Aligator extends WireData implements Module{
 
             if(count($options) && isset($options[$level-1])) {
                 $selector = isset($options[$level-1]['selector']) ? $options[$level-1]['selector'] : "";
-                $return = isset($options[$level-1]['callback']) ? call_user_func_array($options[$level-1]['callback'], array($page, $level)) : array();
-                $returnDefault = call_user_func_array($this->defaultOptions['callback'], array($page, $level));
+                $return = isset($options[$level-1]['callback']) ? call_user_func_array($options[$level-1]['callback'], array($page, $level, $wire)) : array();
+                $returnDefault = call_user_func_array($this->defaultOptions['callback'], array($page, $level, $wire));
                 $return = array_merge($returnDefault, $return);
             } else {
-                $return = call_user_func_array($this->defaultOptions['callback'], array($page, $level));
+                $return = call_user_func_array($this->defaultOptions['callback'], array($page, $level, $wire));
             }
             $out .= $return["listOpen"] . $return["item"] . $s . $return["listClose"];
 
