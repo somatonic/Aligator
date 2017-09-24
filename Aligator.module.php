@@ -12,15 +12,18 @@
 class Aligator extends WireData implements Module{
 
     protected $defaultOptions;
-    protected $defaultConfig;
+    protected $defaultStates;
+    public $enableStates;
+    public $levels;
+    public $collapsed;
 
     public static function getModuleInfo() {
         return array(
             'title' => 'Aligator',
-            'version' => 1,
+            'version' => 2,
             'summary' => 'Module to render nested markup from a specific root parent or an PageArray of roots.',
             'href' => 'http://processwire.com',
-            'singular' => true,
+            'singular' => false,
             'autoload' => false,
             'icon' => 'compass',
         );
@@ -28,13 +31,25 @@ class Aligator extends WireData implements Module{
 
     public function init(){
 
-        // set the default options
+        $this->enableStates = false;
+        $this->levels = null;
+        $this->collapsed = false;
+
+        $this->defaultStates = array(
+            "is_parent" => "parent",
+            "is_current" => "current",
+            "has_children" => "has_children",
+            "is_first" => "first",
+            "is_last" => "last",
+        );
+
         $this->defaultOptions = array(
-            "selector" => "",
-            "callback" => function($item, $level){
+            "selector" => "template=basic-page",
+            "callback" => function($item, $level, $states) {
+                $classes = $states ? " class='$states'" : "";
                 return array(
-                    "item" => "<a href='$item->url'>" . $item->title . "</a>",
-                    "listOpen" => "<li>",
+                    "item" => "<a href='$item->url'>$item->title</a>",
+                    "listOpen" => "<li$classes>",
                     "listClose" => "</li>",
                     "wrapperOpen" => "<ul>",
                     "wrapperClose" => "</ul>"
@@ -44,104 +59,135 @@ class Aligator extends WireData implements Module{
 
     }
 
+    public function render($root, $options = array()) {
+        return $this->renderTree($root, $options, $level = 0);
+    }
+
     /**
      * Recursively render the tree
      * @param  Page  $root     ProcessWire Page or PageArray
      * @param  array   $options  Options array containing configuration and callback for each item/level
-     * @param  int  $limit    Maximum level to render the tree
-     * @param  boolean $collapse Whether to render only the active page branch or all open
+     * @param  int   $level  Current level
      * @return string           The generated markup
      */
-    public function render($root, $options = array(), $limit = null, $collapse = false) {
+    protected function renderTree($root, $options = array(), $level) {
 
-        static $level = 0;
         $level++;
         $out = "";
-        if($limit && $level > $limit) return;
+        if($this->levels && $level > $this->levels) return;
 
         $return = array();
         $selector = "";
         $children = null;
+        $states = "";
 
         if(count($options) && isset($options[$level-1])) {
-
-            $selector = isset($options[$level-1]['selector']) ? $options[$level-1]['selector'] : "";
-
-            if($root instanceof PageArray){
-                $children = $root;
-            } else {
-                $children = $root->children($selector);
-            }
-
-            if(!count($children)) return;
-            $firstChild = $children->first();
-            if(!$firstChild->id) return;
-            $return = isset($options[$level-1]['callback']) ? call_user_func_array($options[$level-1]['callback'], array($firstChild, $level)) : array();
-            $returnDefault = call_user_func_array($this->defaultOptions['callback'], array($firstChild, $level));
-            $return = array_merge($returnDefault, $return);
-
+            $selector = isset($options[$level-1]['selector'])
+                            ? $options[$level-1]['selector']
+                            : $this->defaultOptions['selector'];
         } else {
-
-            if($root instanceof PageArray){
-                $children = $root;
-            } else {
-                $children = $root->children($selector);
-            }
-
-            if(!count($children)) return;
-            $firstChild = $children->first();
-            if(!$firstChild->id) return;
-            $return = call_user_func_array($this->defaultOptions['callback'], array($firstChild, $level));
+            $selector = $this->defaultOptions['selector'];
         }
+
+        if($root instanceof PageArray){
+            $children = $root;
+        } else {
+            $children = $root->children($selector);
+        }
+
+        if(!count($children)) return;
+        $firstChild = $children->first();
+
+        if(count($options) && isset($options[$level-1])){
+            if(isset($options[$level-1]['callback'])) {
+                $return = call_user_func_array($options[$level-1]['callback'], array($firstChild, $level, $states));
+            } else {
+                $return = array();
+            }
+            $returnDefault = call_user_func_array($this->defaultOptions['callback'], array($firstChild, $level, $states));
+            $return = array_merge($returnDefault, $return);
+        } else {
+            $return = call_user_func_array($this->defaultOptions['callback'], array($firstChild, $level, $states));
+        }
+
 
         if($return["wrapperOpen"]) {
             $out .= $return["wrapperOpen"];
         } else if($level == 1) {
-            $out .= "<ul>";
+            $out .= $return["wrapperOpen"];
         } else if($root->numChildren($selector)) {
-            $out .= "<ul>";
+            $out .= $return["wrapperOpen"];
         }
 
-
         foreach($children as $key => $page) {
+
             $s = "";
 
-            $is_parent = wire("page")->parents->has($page);
-            $is_current = $page === wire("page");
+            $has_children = false;
+            $is_parent = false;
+            $is_current = $page === $this->wire("page");
+            $isRoot = false;
 
-            if(!$collapse){
-                if($page->numChildren($selector)) {
-                    $s = $this->render($page, $options, $limit, $collapse);
-                    $level--;
+            if($level == 1){
+                $isRoot = $page->children()->has("id=$children");
+            }
+
+            $is_parent = !$isRoot && wire("page")->parents->has($page) ? true : false;
+            $has_children = !$isRoot && ($this->levels && $level < $this->levels) ? ($page->child($selector)->id ? true : false) : false;
+
+            if($this->enableStates){
+                $states = array(
+                    'is_parent' => $is_parent ? $this->defaultStates['is_parent'] : "",
+                    'is_current' => $is_current ? $this->defaultStates['is_current'] : "",
+                    'has_children' => $has_children ? $this->defaultStates['has_children'] : "",
+                    'is_first' => $children->first === $page ? $this->defaultStates['is_first'] : "",
+                    'is_last' => $page === $children->last || $page === $page->siblings($selector)->last ? $this->defaultStates['is_last'] : "",
+                );
+                $states = array_filter($states);
+                $states = implode(" ", $states);
+            }
+            if(!$this->collapsed){
+                if($has_children) {
+                    $s = $this->renderTree($page, $options, $level);
                 }
             } else {
-                if($page->numChildren($selector) && $is_parent) {
-                    $s = $this->render($page, $options, $limit, $collapse);
-                    $level--;
-                } else if($is_current){
-                    $s = $this->render($page, $options, $limit, $collapse);
-                    $level--;
+                if($has_children && $is_parent) {
+                    $s = $this->renderTree($page, $options, $level);
+                } else if($is_current) {
+                    $s = $this->renderTree($page, $options, $level);
                 }
             }
 
             if(count($options) && isset($options[$level-1])) {
-                $selector = isset($options[$level-1]['selector']) ? $options[$level-1]['selector'] : "";
-                $return = isset($options[$level-1]['callback']) ? call_user_func_array($options[$level-1]['callback'], array($page, $level)) : array();
-                $returnDefault = call_user_func_array($this->defaultOptions['callback'], array($page, $level));
+                // $selector = isset($options[$level-1]['selector'])
+                //                 ? $options[$level-1]['selector']
+                //                 : $this->defaultOptions['selector'];
+
+                if(isset($options[$level-1]['callback'])){
+                    $return = call_user_func_array($options[$level-1]['callback'], array($page, $level, $states));
+                } else {
+                    $return = array();
+                }
+                $returnDefault = call_user_func_array($this->defaultOptions['callback'], array($page, $level, $states));
                 $return = array_merge($returnDefault, $return);
+
             } else {
-                $return = call_user_func_array($this->defaultOptions['callback'], array($page, $level));
+                // $selector = $this->defaultOptions['selector'];
+                $return = call_user_func_array($this->defaultOptions['callback'], array($page, $level, $states));
             }
-            $out .= $return["listOpen"] . $return["item"] . $s . $return["listClose"];
+
+
+            if($this->wire("config")->debug) $debug = "<!-- selector: $selector, level: $level -->";
+            $out .= $return["listOpen"] . $return["item"] . $s . $return["listClose"] . $debug;
 
         }
 
-        if($return["wrapperOpen"]) {
+        if($return["wrapperClose"]) {
             $out .= $return["wrapperClose"];
         } else if($level == 1) {
-            $out .= "</ul>";
+            $out .= $return["wrapperClose"];;
         } else if($root->numChildren($selector)) {
-            $out .= "</ul>";
+            $out .= $return["wrapperClose"];;
         }
 
         return $out;
@@ -150,6 +196,16 @@ class Aligator extends WireData implements Module{
 
     public function setDefaultOptions($options = array()){
         $this->defaultOptions = array_merge($this->defaultOptions, $options);
+    }
+
+    public function setDefaultStates($options = array()){
+        if(is_bool($options)){
+            $this->enableStates = $options;
+            $this->defaultStates = $options ? $this->defaultStates : array();
+        } else {
+            $this->enableStates = true;
+            $this->defaultStates = array_merge($this->defaultStates, $options);
+        }
     }
 
 }
