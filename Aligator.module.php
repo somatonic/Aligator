@@ -44,7 +44,7 @@ class Aligator extends WireData implements Module{
         );
 
         $this->defaultOptions = array(
-            "selector" => "template=basic-page",
+            "selector" => "",
             "callback" => function($item, $level, $states) {
                 $classes = $states ? " class='$states'" : "";
                 return array(
